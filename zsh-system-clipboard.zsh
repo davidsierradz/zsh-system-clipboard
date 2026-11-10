@@ -118,8 +118,32 @@ function zsh-system-clipboard-get(){
   zsh-system-clipboard-get-${_zsh_system_clipboard_method_current}
 }
 
+# Remembers the register given with `"` so the wrappers below can honour the
+# black hole register ("_), then hands it to ZLE as usual.
+function zsh-system-clipboard-vicmd-vi-set-buffer() {
+  local key
+  read -k key || return 1
+  typeset -g _zsh_system_clipboard_register=$key
+  zle vi-set-buffer -- "$key"
+}
+zle -N zsh-system-clipboard-vicmd-vi-set-buffer
+
+# Runs the native cut widget $1 and fails when the cut went to the black hole
+# register, so the caller leaves the system clipboard alone. ZLE leaves the cut
+# buffer and the kill ring untouched then; checking them too keeps a stale
+# register (`"_` followed by a motion) from swallowing a later cut.
+function _zsh_system_clipboard_vi_cut() {
+  local register=$_zsh_system_clipboard_register
+  typeset -g _zsh_system_clipboard_register=
+  local -a before after
+  before=("$CUTBUFFER" "${killring[@]}")
+  zle $1
+  after=("$CUTBUFFER" "${killring[@]}")
+  [[ $register != _ || ${(qj: :)before} != ${(qj: :)after} ]]
+}
+
 function zsh-system-clipboard-vicmd-vi-yank() {
-  zle vi-yank
+  _zsh_system_clipboard_vi_cut vi-yank || return 0
   if [[ "${KEYS}" == "y" && "${KEYMAP}" == 'viopp' ]]; then # A new line should be added to the end
     printf '%s\n' "$CUTBUFFER" | zsh-system-clipboard-set
   else
@@ -129,13 +153,13 @@ function zsh-system-clipboard-vicmd-vi-yank() {
 zle -N zsh-system-clipboard-vicmd-vi-yank
 
 function zsh-system-clipboard-vicmd-vi-yank-eol() {
-  zle vi-yank-eol
+  _zsh_system_clipboard_vi_cut vi-yank-eol || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-yank-eol
 
 function zsh-system-clipboard-vicmd-vi-yank-whole-line() {
-  zle vi-yank-whole-line
+  _zsh_system_clipboard_vi_cut vi-yank-whole-line || return 0
   printf '%s\n' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-yank-whole-line
@@ -194,7 +218,7 @@ zle -N zsh-system-clipboard-vicmd-vi-put-before
 
 function zsh-system-clipboard-vicmd-vi-delete() {
   local region_was_active=${REGION_ACTIVE}
-  zle vi-delete
+  _zsh_system_clipboard_vi_cut vi-delete || return 0
   if [[ "${KEYS}" == "d" && "${region_was_active}" == 0 ]]; then # A new line should be added to the end
     printf '%s\n' "$CUTBUFFER" | zsh-system-clipboard-set
   else
@@ -204,49 +228,49 @@ function zsh-system-clipboard-vicmd-vi-delete() {
 zle -N zsh-system-clipboard-vicmd-vi-delete
 
 function zsh-system-clipboard-vicmd-vi-delete-char() {
-  zle vi-delete-char
+  _zsh_system_clipboard_vi_cut vi-delete-char || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-delete-char
 
 function zsh-system-clipboard-vicmd-vi-change-eol() {
-  zle vi-change-eol
+  _zsh_system_clipboard_vi_cut vi-change-eol || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-change-eol
 
 function zsh-system-clipboard-vicmd-vi-kill-eol() {
-  zle vi-kill-eol
+  _zsh_system_clipboard_vi_cut vi-kill-eol || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-kill-eol
 
 function zsh-system-clipboard-vicmd-vi-change-whole-line() {
-  zle vi-change-whole-line
+  _zsh_system_clipboard_vi_cut vi-change-whole-line || return 0
   printf '%s\n' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-change-whole-line
 
 function zsh-system-clipboard-vicmd-vi-change() {
-  zle vi-change
+  _zsh_system_clipboard_vi_cut vi-change || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-change
 
 function zsh-system-clipboard-vicmd-vi-substitue() {
-  zle vi-substitue
+  _zsh_system_clipboard_vi_cut vi-substitue || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-substitue
 
 function zsh-system-clipboard-vicmd-vi-delete-char() {
-  zle vi-delete-char
+  _zsh_system_clipboard_vi_cut vi-delete-char || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-delete-char
 
 function zsh-system-clipboard-vicmd-vi-backward-delete-char() {
-  zle vi-backward-delete-char
+  _zsh_system_clipboard_vi_cut vi-backward-delete-char || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
 zle -N zsh-system-clipboard-vicmd-vi-backward-delete-char
