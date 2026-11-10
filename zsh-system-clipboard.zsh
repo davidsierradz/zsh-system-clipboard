@@ -257,11 +257,11 @@ function zsh-system-clipboard-vicmd-vi-change() {
 }
 zle -N zsh-system-clipboard-vicmd-vi-change
 
-function zsh-system-clipboard-vicmd-vi-substitue() {
-  _zsh_system_clipboard_vi_cut vi-substitue || return 0
+function zsh-system-clipboard-vicmd-vi-substitute() {
+  _zsh_system_clipboard_vi_cut vi-substitute || return 0
   printf '%s' "$CUTBUFFER" | zsh-system-clipboard-set
 }
-zle -N zsh-system-clipboard-vicmd-vi-substitue
+zle -N zsh-system-clipboard-vicmd-vi-substitute
 
 function zsh-system-clipboard-vicmd-vi-delete-char() {
   _zsh_system_clipboard_vi_cut vi-delete-char || return 0
