@@ -311,7 +311,10 @@ zle -N zsh-system-clipboard-visual-put-replace-selection
 # binded below automatically.
 function zsh-system-clipboard-visual-put-selection(){
   # This acts similarly to the above, but because we don't need to set anything
-  # to the clipboard, it is implemented very simply.
+  # to the clipboard, it is implemented very simply. The selection goes to the
+  # black hole register, so ZLE's own registers are left alone too.
+  typeset -g _zsh_system_clipboard_register=
+  zle vi-set-buffer _
   zle vi-delete
   zsh-system-clipboard-vicmd-vi-put-before
 }
