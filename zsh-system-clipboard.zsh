@@ -323,6 +323,66 @@ if [[ ! -n "$ZSH_SYSTEM_CLIPBOARD_DISABLE_DEFAULT_MAPS" ]]; then
   bindkey -M visual P zsh-system-clipboard-visual-put-selection
 fi
 
+# Replace operator, like mini.nvim's mini.operators replace: the text of a
+# motion, text object or visual selection is replaced by the clipboard, leaving
+# the clipboard and ZLE's registers alone. Doubling the key (e.g. `ss`)
+# replaces whole lines, and `.` repeats it. Not bound by default.
+function zsh-system-clipboard-vicmd-replace() {
+  zle -f vichange
+  local text before=$BUFFER region=$REGION_ACTIVE
+  text="$(zsh-system-clipboard-get; printf '%s' x)"
+  text="${text%x}"
+  typeset -g _zsh_system_clipboard_register=
+  # When repeated with `.`, ZLE restores the original change's buffer settings
+  # over the "_ below, so put back the cut buffer and kill ring too
+  local cutbuffer=$CUTBUFFER
+  local -a kills
+  kills=("${killring[@]}")
+  # Reads the motion itself; repeating the key that called us makes it linewise
+  zle .vi-set-buffer _
+  zle .vi-delete
+  local -i deleted=$?
+  CUTBUFFER=$cutbuffer
+  killring=("${kills[@]}")
+  (( deleted == 0 )) || return 1
+  local after=$BUFFER
+  local -i len=$(( $#before - $#after )) pos=-1 p line_start=0
+  (( len > 0 )) || return 1
+
+  # ZLE doesn't say where the cut text was. Find the offset that explains the
+  # new buffer: where the cursor was left, one past it (a cut that reached the
+  # end of the line moves it back), the start of its line (a linewise cut
+  # leaves it on the first non-blank), or the end (the last lines were cut).
+  local left=${after[1,CURSOR]}
+  [[ $left == *$'\n'* ]] && line_start=$(( ${#${left%$'\n'*}} + 1 ))
+  for p in $CURSOR $(( CURSOR + 1 )) $line_start $#after; do
+    if [[ ${before[1,p]} == "${after[1,p]}" &&
+          ${before[p+len+1,-1]} == "${after[p+1,-1]}" ]]; then
+      pos=$p
+      break
+    fi
+  done
+  (( pos >= 0 )) || return 1
+  local cut=${before[pos+1,pos+len]} lines=${text%$'\n'}
+
+  if (( region != 1 )) && [[ $cut == *$'\n' ]] &&
+     { (( pos == 0 )) || [[ ${before[pos]} == $'\n' ]] }; then
+    # Whole lines were cut: put the clipboard as lines in their place
+    BUFFER=${after[1,pos]}$lines$'\n'${after[pos+1,-1]}
+    CURSOR=$pos
+  elif (( region != 1 && pos > 0 && pos == $#after )) && [[ $cut == $'\n'* ]]; then
+    # The last lines were cut (with the newline before them)
+    BUFFER=$after$'\n'$lines
+    CURSOR=$(( pos + 1 ))
+  else
+    # Characters were cut: put the clipboard inline, without the trailing
+    # newline of a linewise yank, and leave the cursor on its last character
+    BUFFER=${after[1,pos]}$lines${after[pos+1,-1]}
+    CURSOR=$(( pos + ($#lines ? $#lines - 1 : 0) ))
+  fi
+}
+zle -N zsh-system-clipboard-vicmd-replace
+
 function zsh-system-clipboard-visual-vi-delete(){
   zsh-system-clipboard-vicmd-vi-delete
 }

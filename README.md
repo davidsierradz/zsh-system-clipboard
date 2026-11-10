@@ -147,6 +147,13 @@ It will show pretty-printed errors via `stderr` or `stdout` if something went wr
 bindkey -M vicmd Y zsh-system-clipboard-vicmd-vi-yank-eol
 ```
 
+There's also a replace operator, like [mini.operators](https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-operators.md)' replace: `zsh-system-clipboard-vicmd-replace` replaces the text of a motion or text object (e.g. `siw`, `s$`), whole lines when its key is doubled (`ss`) or the visual selection with the clipboard. Neither the clipboard nor ZLE's registers change, so you can replace several places in a row, and `.` repeats it. Clipboard text ending in a newline replaces lines as lines and is put inline (without the newline) otherwise. To bind it to `s`, instead of `vi-substitute`:
+
+```zsh
+bindkey -M vicmd s zsh-system-clipboard-vicmd-replace
+bindkey -M visual s zsh-system-clipboard-vicmd-replace
+```
+
 ## Thanks
 
 Special thanks to _Doron Behar ([@doronbehar](https://github.com/doronbehar))_ for their interests, suggestions, time and pull requests.
