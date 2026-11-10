@@ -124,7 +124,7 @@ function zsh-system-clipboard-vicmd-vi-set-buffer() {
   local key
   read -k key || return 1
   typeset -g _zsh_system_clipboard_register=$key
-  zle vi-set-buffer -- "$key"
+  zle .vi-set-buffer -- "$key"
 }
 zle -N zsh-system-clipboard-vicmd-vi-set-buffer
 
@@ -314,7 +314,7 @@ function zsh-system-clipboard-visual-put-selection(){
   # to the clipboard, it is implemented very simply. The selection goes to the
   # black hole register, so ZLE's own registers are left alone too.
   typeset -g _zsh_system_clipboard_register=
-  zle vi-set-buffer _
+  zle .vi-set-buffer _
   zle vi-delete
   zsh-system-clipboard-vicmd-vi-put-before
 }
